@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Encaminha – das anotações aos encaminhamentos</title>
+<meta name="description" content="Cole as anotações da reunião e receba decisões, tarefas, responsáveis, prazos e pendências.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📝</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --papel: #F2F5F3;
+    --folha: #FFFFFF;
+    --tinta: #1B2632;
+    --tinta-suave: #5A6672;
+    --pauta: #DCE3E7;
+    --margem: #E9A3A3;
+    --marca: #E6F05C;
+    --marca-tinta: #1B2632;
+    --acao: #1D5C70;
+    --acao-hover: #164A5B;
+    --acao-tinta: #FFFFFF;
+    --alerta: #A4471F;
+    --alerta-fundo: #FBEDE6;
+    --borda: #CFD8DD;
+    --sombra: 0 1px 2px rgba(27, 38, 50, .06), 0 8px 24px rgba(27, 38, 50, .06);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --papel: #10161C; --folha: #182029; --tinta: #E3E8EC; --tinta-suave: #97A3AE;
+      --pauta: #243039; --margem: #6B3A3A; --marca: #C5D23A; --marca-tinta: #10161C;
+      --acao: #6BB2C7; --acao-hover: #8AC4D5; --acao-tinta: #0E1A20;
+      --alerta: #F0A27E; --alerta-fundo: #2D1E17; --borda: #2C3843;
+      --sombra: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --papel: #10161C; --folha: #182029; --tinta: #E3E8EC; --tinta-suave: #97A3AE;
+    --pauta: #243039; --margem: #6B3A3A; --marca: #C5D23A; --marca-tinta: #10161C;
+    --acao: #6BB2C7; --acao-hover: #8AC4D5; --acao-tinta: #0E1A20;
+    --alerta: #F0A27E; --alerta-fundo: #2D1E17; --borda: #2C3843;
+    --sombra: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--papel);
+    color: var(--tinta);
+    font-family: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .pagina { max-width: 760px; margin: 0 auto; padding: 20px 20px 64px; }
+
+  /* Topo */
+  .topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 28px; }
+  .marca-nome { font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -.01em; }
+  .topo-dir { display: flex; align-items: center; gap: 10px; }
+  .versao { font-size: 13px; color: var(--tinta-suave); border: 1px solid var(--borda); border-radius: 999px; padding: 2px 10px; }
+  .tema {
+    width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--borda);
+    background: var(--folha); color: var(--tinta); cursor: pointer; display: grid; place-items: center;
+  }
+  .tema svg { width: 18px; height: 18px; }
+  .tema .lua { display: none; }
+  :root[data-escuro="1"] .tema .sol { display: none; }
+  :root[data-escuro="1"] .tema .lua { display: block; }
+
+  h1 {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 700;
+    font-size: clamp(30px, 6vw, 44px); line-height: 1.08; letter-spacing: -.02em;
+    margin: 0 0 12px; max-width: 18ch;
+  }
+  .intro { color: var(--tinta-suave); margin: 0 0 24px; max-width: 58ch; }
+
+  .faixa {
+    border-radius: 10px; padding: 10px 14px; font-size: 15px; margin-bottom: 18px;
+    background: var(--alerta-fundo); color: var(--alerta);
+  }
+  .faixa strong { font-weight: 600; }
+  .faixa.demo { background: var(--marca); color: var(--marca-tinta); }
+
+  /* Formulário */
+  .rotulo { display: block; font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+  .campo-data {
+    font: inherit; color: var(--tinta); background: var(--folha);
+    border: 1px solid var(--borda); border-radius: 8px; padding: 8px 12px; margin-bottom: 18px;
+  }
+  .caderno {
+    position: relative; background: var(--folha); border: 1px solid var(--borda);
+    border-radius: 12px; box-shadow: var(--sombra); overflow: hidden;
+  }
+  .caderno::before {
+    content: ""; position: absolute; top: 0; bottom: 0; left: 44px; width: 2px;
+    background: var(--margem); opacity: .55; pointer-events: none;
+  }
+  textarea {
+    display: block; width: 100%; min-height: 300px; resize: vertical;
+    border: 0; outline: none; background: transparent; color: var(--tinta);
+    font: inherit; font-size: 16px;
+    line-height: 30px; padding: 15px 18px 15px 60px;
+    background-image: linear-gradient(to bottom, transparent 29px, var(--pauta) 29px, var(--pauta) 30px);
+    background-size: 100% 30px; background-position: 0 15px; background-attachment: local;
+  }
+  textarea::placeholder { color: var(--tinta-suave); opacity: .8; }
+  .caderno:focus-within { border-color: var(--acao); box-shadow: 0 0 0 3px color-mix(in srgb, var(--acao) 25%, transparent); }
+  .contador { font-size: 13px; color: var(--tinta-suave); text-align: right; margin-top: 6px; }
+
+  .acoes { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; align-items: center; }
+  button.principal {
+    font: inherit; font-weight: 600; font-size: 17px; cursor: pointer;
+    background: var(--acao); color: var(--acao-tinta); border: 0; border-radius: 10px;
+    padding: 13px 22px; display: inline-flex; align-items: center; gap: 10px;
+  }
+  button.principal:hover { background: var(--acao-hover); }
+  button.principal:disabled { opacity: .6; cursor: progress; }
+  button.secundario {
+    font: inherit; font-size: 15px; cursor: pointer; background: transparent; color: var(--tinta);
+    border: 1px solid var(--borda); border-radius: 10px; padding: 10px 16px;
+  }
+  button.secundario:hover { border-color: var(--tinta-suave); }
+  button:focus-visible, .tema:focus-visible, .campo-data:focus-visible { outline: 3px solid var(--acao); outline-offset: 2px; }
+  .girando { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: gira .8s linear infinite; }
+  @keyframes gira { to { transform: rotate(360deg); } }
+
+  .erro { margin-top: 14px; color: var(--alerta); font-weight: 500; }
+
+  /* Resultado */
+  .resultado { margin-top: 40px; }
+  .resultado[hidden] { display: none; }
+  .folha-resultado { background: var(--folha); border: 1px solid var(--borda); border-radius: 14px; box-shadow: var(--sombra); padding: 28px clamp(18px, 4vw, 36px); }
+  .res-titulo { font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 26px; line-height: 1.15; margin: 0 0 4px; }
+  .res-data { color: var(--tinta-suave); font-size: 15px; margin: 0 0 16px; }
+  .res-resumo { margin: 0 0 8px; max-width: 64ch; }
+
+  .secao { margin-top: 28px; }
+  .secao h3 {
+    display: inline; font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 19px;
+    padding: 0 6px; margin-left: -6px; color: var(--marca-tinta);
+    background: linear-gradient(to bottom, transparent 18%, var(--marca) 18%, var(--marca) 88%, transparent 88%);
+    -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  }
+  .secao .qtd { color: var(--tinta-suave); font-size: 14px; margin-left: 8px; }
+  .secao ol { margin: 12px 0 0; padding-left: 22px; }
+  .secao li { margin-bottom: 6px; padding-left: 4px; }
+  .vazio { color: var(--tinta-suave); font-style: italic; margin: 10px 0 0; }
+
+  .tabela-wrap { overflow-x: auto; margin-top: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 16px; min-width: 520px; }
+  th { text-align: left; font-size: 13px; font-weight: 600; color: var(--tinta-suave); padding: 6px 10px 6px 0; border-bottom: 1px solid var(--borda); }
+  td { padding: 10px 10px 10px 0; border-bottom: 1px solid var(--pauta); vertical-align: top; }
+  td.num { color: var(--tinta-suave); width: 28px; }
+  td.quem, td.quando { white-space: nowrap; }
+  .falta { color: var(--alerta); font-style: italic; }
+  .confirmar { color: var(--tinta-suave); font-size: 14px; display: block; }
+
+  .aviso-copia { font-size: 14px; color: var(--tinta-suave); }
+
+  .avaliacao { margin-top: 20px; padding: 18px 20px; border: 1px dashed var(--borda); border-radius: 12px; }
+  .avaliacao p { margin: 0 0 10px; font-weight: 600; }
+  .opcoes { display: flex; gap: 8px; flex-wrap: wrap; }
+  .opcoes button { min-width: 56px; }
+  .opcoes button[aria-pressed="true"] { background: var(--acao); color: var(--acao-tinta); border-color: var(--acao); }
+  .obrigado { margin-top: 10px; color: var(--tinta-suave); font-size: 15px; }
+
+  .rodape { margin-top: 48px; font-size: 13px; color: var(--tinta-suave); }
+
+  @media (max-width: 520px) {
+    body { font-size: 16px; }
+    .caderno::before { left: 30px; }
+    textarea { padding-left: 42px; }
+    button.principal { width: 100%; justify-content: center; }
+    table { min-width: 0; }
+    thead { display: none; }
+    tr { display: grid; grid-template-columns: 26px 1fr; padding: 12px 0; border-bottom: 1px solid var(--pauta); }
+    td { border: 0; padding: 0; }
+    td.num { grid-row: span 3; }
+    td.quem, td.quando { white-space: normal; font-size: 15px; color: var(--tinta-suave); margin-top: 2px; }
+    td.quem::before { content: "Responsável: "; }
+    td.quando::before { content: "Prazo: "; }
+    td.quando .confirmar { display: inline; margin-left: 4px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .girando { animation: none; } }
+</style>
+</head>
+<body>
+<div class="pagina">
+
+  <header class="topo">
+    <span class="marca-nome">Encaminha</span>
+    <div class="topo-dir">
+      <span class="versao" id="versao"></span>
+      <button class="tema" id="botaoTema" type="button" aria-label="Alternar modo claro ou escuro">
+        <svg class="sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="lua" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <h1>Das anotações da reunião aos encaminhamentos</h1>
+    <p class="intro">Cole o que você anotou, do jeito que estiver. A organização separa o que foi decidido, quem ficou com cada tarefa, os prazos e o que ainda está em aberto.</p>
+
+    <div class="faixa demo" id="faixaDemo" hidden><strong>Modo demonstração.</strong> O resultado é um exemplo fixo e nada é registrado.</div>
+    <div class="faixa"><strong>Antes de colar:</strong> retire nomes de pessoas atendidas e assuntos confidenciais. O texto é processado por uma IA e não fica guardado.</div>
+
+    <label class="rotulo" for="dataReuniao">Data da reunião</label>
+    <input class="campo-data" type="date" id="dataReuniao">
+
+    <label class="rotulo" for="anotacoes">Anotações da reunião</label>
+    <div class="caderno">
+      <textarea id="anotacoes" spellcheck="true" placeholder="Cole aqui as anotações da sua reunião"></textarea>
+    </div>
+    <div class="contador" id="contador">0 caracteres</div>
+
+    <div class="acoes">
+      <button class="principal" id="botaoOrganizar" type="button">Organizar com IA</button>
+      <button class="secundario" id="botaoLimpar" type="button">Limpar</button>
+    </div>
+    <div class="erro" id="erro" role="alert"></div>
+
+    <section class="resultado" id="resultado" hidden aria-live="polite">
+      <div class="folha-resultado" id="folha"></div>
+      <div class="acoes">
+        <button class="principal" id="botaoCopiar" type="button">Copiar para o WhatsApp</button>
+        <span class="aviso-copia" id="avisoCopia"></span>
+      </div>
+
+      <div class="avaliacao" id="avaliacao">
+        <p>Quantos itens você precisou corrigir ou acrescentar?</p>
+        <div class="opcoes" id="opcoes">
+          <button class="secundario" type="button" data-valor="0">0</button>
+          <button class="secundario" type="button" data-valor="1">1</button>
+          <button class="secundario" type="button" data-valor="2">2</button>
+          <button class="secundario" type="button" data-valor="3+">3 ou mais</button>
+        </div>
+        <div class="obrigado" id="obrigado"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="rodape" id="rodape"></footer>
+</div>
+
+<script>
+/* ============ CONFIGURAÇÃO ============ */
+const VERSAO = "0.1.0";
+const WORKER_URL = "https://encaminha.eneaspr.workers.dev"; // troque pelo endereço do seu Worker
+/* ====================================== */
+
+const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const MODO_DEMO = params.get("demo") === "1";
+
+// Código do líder vem do link (?u=L3) e fica lembrado neste aparelho
+function lerCodigo() {
+  const doLink = (params.get("u") || "").trim();
+  try {
+    if (doLink) localStorage.setItem("encaminha_usuario", doLink);
+    return doLink || localStorage.getItem("encaminha_usuario") || "";
+  } catch { return doLink; }
+}
+const USUARIO = lerCodigo();
+
+$("versao").textContent = "v" + VERSAO;
+$("rodape").textContent = `Protótipo de validação · v${VERSAO}` + (USUARIO ? ` · participante ${USUARIO.toUpperCase()}` : "");
+if (MODO_DEMO) $("faixaDemo").hidden = false;
+
+// Data de hoje como padrão (fuso local)
+(function () {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  $("dataReuniao").value = d.toISOString().slice(0, 10);
+})();
+
+/* ---- Tema claro/escuro ---- */
+function aplicarTema(tema) {
+  const raiz = document.documentElement;
+  if (tema) raiz.setAttribute("data-theme", tema); else raiz.removeAttribute("data-theme");
+  const escuro = tema ? tema === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  raiz.setAttribute("data-escuro", escuro ? "1" : "0");
+}
+let temaSalvo = null;
+try { temaSalvo = localStorage.getItem("encaminha_tema"); } catch {}
+aplicarTema(temaSalvo);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (!temaSalvo) aplicarTema(null); });
+$("botaoTema").addEventListener("click", () => {
+  const escuro = document.documentElement.getAttribute("data-escuro") === "1";
+  temaSalvo = escuro ? "light" : "dark";
+  try { localStorage.setItem("encaminha_tema", temaSalvo); } catch {}
+  aplicarTema(temaSalvo);
+});
+
+/* ---- Contador ---- */
+$("anotacoes").addEventListener("input", () => {
+  const n = $("anotacoes").value.length;
+  $("contador").textContent = n.toLocaleString("pt-BR") + (n === 1 ? " caractere" : " caracteres");
+});
+
+$("botaoLimpar").addEventListener("click", () => {
+  $("anotacoes").value = "";
+  $("anotacoes").dispatchEvent(new Event("input"));
+  $("resultado").hidden = true;
+  $("erro").textContent = "";
+  $("anotacoes").focus();
+});
+
+/* ---- Organizar ---- */
+let usoAtual = null;
+let ultimoResultado = null;
+
+$("botaoOrganizar").addEventListener("click", organizar);
+
+async function organizar() {
+  const anotacoes = $("anotacoes").value.trim();
+  const data = $("dataReuniao").value;
+  $("erro").textContent = "";
+
+  if (anotacoes.length < 20) {
+    $("erro").textContent = "Cole pelo menos algumas linhas de anotações para organizar.";
+    $("anotacoes").focus();
+    return;
+  }
+
+  const botao = $("botaoOrganizar");
+  botao.disabled = true;
+  botao.innerHTML = '<span class="girando" aria-hidden="true"></span> Organizando…';
+
+  try {
+    let resposta;
+    if (MODO_DEMO) {
+      await new Promise((r) => setTimeout(r, 900));
+      resposta = { resultado: EXEMPLO, uso_id: null };
+    } else {
+      const r = await fetch(WORKER_URL + "/organizar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ anotacoes, data, usuario: USUARIO }),
+      });
+      resposta = await r.json().catch(() => ({ erro: "Resposta inválida do servidor." }));
+      if (!r.ok) throw new Error(resposta.erro || "Não foi possível organizar agora.");
+    }
+    usoAtual = resposta.uso_id;
+    ultimoResultado = resposta.resultado;
+    mostrar(resposta.resultado, data);
+  } catch (e) {
+    $("erro").textContent = (e.message && e.message !== "Failed to fetch")
+      ? e.message
+      : "Sem conexão com o servidor. Verifique a internet e tente de novo.";
+  } finally {
+    botao.disabled = false;
+    botao.textContent = "Organizar com IA";
+  }
+}
+
+/* ---- Exibir ---- */
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const dataBR = (iso) => iso ? iso.split("-").reverse().join("/") : "";
+
+function lista(itens) {
+  if (!itens || !itens.length) return '<p class="vazio">Nenhum item identificado.</p>';
+  return "<ol>" + itens.map((i) => `<li>${esc(i)}</li>`).join("") + "</ol>";
+}
+
+function prazoHTML(t) {
+  if (t.prazo) return esc(t.prazo);
+  if (t.prazo_texto) return `<span class="falta">a confirmar</span><span class="confirmar">“${esc(t.prazo_texto)}”</span>`;
+  return '<span class="falta">não definido</span>';
+}
+
+function mostrar(r, data) {
+  const decisoes = r.decisoes || [], tarefas = r.tarefas || [], pendencias = r.pendencias || [];
+  const qtd = (n) => `<span class="qtd">${n}</span>`;
+
+  let tabela;
+  if (!tarefas.length) {
+    tabela = '<p class="vazio">Nenhuma tarefa identificada.</p>';
+  } else {
+    tabela = `<div class="tabela-wrap"><table>
+      <thead><tr><th></th><th>Tarefa</th><th>Responsável</th><th>Prazo</th></tr></thead>
+      <tbody>${tarefas.map((t, i) => `<tr>
+        <td class="num">${i + 1}.</td>
+        <td>${esc(t.descricao)}</td>
+        <td class="quem">${t.responsavel ? esc(t.responsavel) : '<span class="falta">não definido</span>'}</td>
+        <td class="quando">${prazoHTML(t)}</td>
+      </tr>`).join("")}</tbody></table></div>`;
+  }
+
+  $("folha").innerHTML = `
+    <h2 class="res-titulo">${esc(r.titulo || "Reunião")}</h2>
+    <p class="res-data">${data ? "Reunião de " + dataBR(data) : ""}</p>
+    <p class="res-resumo">${esc(r.resumo)}</p>
+    <div class="secao"><h3>Decisões</h3>${qtd(decisoes.length)}${lista(decisoes)}</div>
+    <div class="secao"><h3>Tarefas</h3>${qtd(tarefas.length)}${tabela}</div>
+    <div class="secao"><h3>Pendências</h3>${qtd(pendencias.length)}${lista(pendencias)}</div>`;
+
+  // reinicia avaliação
+  document.querySelectorAll("#opcoes button").forEach((b) => { b.disabled = false; b.setAttribute("aria-pressed", "false"); });
+  $("obrigado").textContent = "";
+  $("avisoCopia").textContent = "";
+  $("avaliacao").hidden = false;
+
+  $("resultado").hidden = false;
+  $("resultado").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+}
+
+/* ---- Copiar ---- */
+function textoWhatsApp(r, data) {
+  const linhas = [];
+  linhas.push(`*${r.titulo || "Reunião"}*`);
+  if (data) linhas.push(`Data: ${dataBR(data)}`);
+  linhas.push("");
+  if (r.resumo) { linhas.push(r.resumo); linhas.push(""); }
+  const bloco = (titulo, itens) => {
+    linhas.push(`*${titulo}*`);
+    if (!itens.length) linhas.push("Nenhum item.");
+    itens.forEach((t, i) => linhas.push(`${i + 1}. ${t}`));
+    linhas.push("");
+  };
+  bloco("Decisões", r.decisoes || []);
+  bloco("Tarefas", (r.tarefas || []).map((t) => {
+    const prazo = t.prazo || (t.prazo_texto ? `${t.prazo_texto} (a confirmar)` : "prazo não definido");
+    return `${t.descricao} – ${t.responsavel || "responsável não definido"} – ${prazo}`;
+  }));
+  bloco("Pendências", r.pendencias || []);
+  return linhas.join("\n").trim();
+}
+
+$("botaoCopiar").addEventListener("click", async () => {
+  if (!ultimoResultado) return;
+  const texto = textoWhatsApp(ultimoResultado, $("dataReuniao").value);
+  try {
+    await navigator.clipboard.writeText(texto);
+    $("avisoCopia").textContent = "Copiado. Agora é só colar no grupo.";
+  } catch {
+    const area = document.createElement("textarea");
+    area.value = texto; document.body.appendChild(area); area.select();
+    const ok = document.execCommand("copy"); area.remove();
+    $("avisoCopia").textContent = ok ? "Copiado. Agora é só colar no grupo." : "Não foi possível copiar neste navegador.";
+  }
+});
+
+/* ---- Avaliação ---- */
+$("opcoes").addEventListener("click", async (ev) => {
+  const b = ev.target.closest("button[data-valor]");
+  if (!b) return;
+  const valor = b.dataset.valor;
+  document.querySelectorAll("#opcoes button").forEach((x) => { x.setAttribute("aria-pressed", String(x === b)); x.disabled = true; });
+
+  if (MODO_DEMO || !usoAtual) {
+    $("obrigado").textContent = MODO_DEMO ? "Resposta anotada (modo demonstração, nada foi registrado)." : "Obrigado pela resposta.";
+    return;
+  }
+  try {
+    const r = await fetch(WORKER_URL + "/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uso_id: usoAtual, correcoes: valor }),
+    });
+    if (!r.ok) throw new Error();
+    $("obrigado").textContent = "Obrigado. Sua resposta foi registrada.";
+  } catch {
+    $("obrigado").textContent = "Não foi possível registrar a resposta. Tente de novo.";
+    document.querySelectorAll("#opcoes button").forEach((x) => { x.disabled = false; x.setAttribute("aria-pressed", "false"); });
+  }
+});
+
+/* ---- Exemplo do modo demonstração ---- */
+const EXEMPLO = {
+  titulo: "Planejamento do treinamento de líderes",
+  resumo: "A equipe confirmou o treinamento de líderes para outubro e definiu as primeiras providências de inscrição, divulgação e local. Horário e orçamento ainda precisam ser fechados.",
+  decisoes: ["Realizar o treinamento no dia 10/10/2026.", "Criar um novo formulário de inscrição."],
+  tarefas: [
+    { descricao: "Criar o formulário de inscrição", responsavel: "Carlos", prazo: "20/09/2026", prazo_texto: null },
+    { descricao: "Preparar a divulgação", responsavel: "Ana", prazo: "22/09/2026", prazo_texto: null },
+    { descricao: "Reservar o local", responsavel: "Marcos", prazo: null, prazo_texto: "logo depois do culto" },
+    { descricao: "Levantar custos do lanche", responsavel: null, prazo: null, prazo_texto: null }
+  ],
+  pendencias: ["Definir o horário do treinamento.", "Confirmar o orçamento.", "Definir responsável e prazo para levantar custos do lanche."]
+};
+</script>
+</body>
+</html>
